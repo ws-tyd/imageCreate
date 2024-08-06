@@ -1,7 +1,6 @@
 package com.jyyy.picturegeneration.pojo.mLol;
 
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -13,17 +12,17 @@ import lombok.NoArgsConstructor;
 @Data
 public class MlolSkins {
 
-  @JsonProperty("id")
+  // @JsonProperty("id")
   private String id;
-  @JsonProperty("HeroId")
+  // @JsonProperty("HeroId")
   private String heroId;
-  @JsonProperty("Name")
+  // @JsonProperty("Name")
   private String name;
-  @JsonProperty("Quality")
+  // @JsonProperty("Quality")
   private String quality;
-  @JsonProperty("Image")
+  // @JsonProperty("Image")
   private String image;
-  @JsonProperty("QualityFont")
+  // @JsonProperty("QualityFont")
   private String qualityFont;
 
 }

@@ -1,6 +1,5 @@
 package com.jyyy.picturegeneration.service.impl;
 
-import cn.hutool.core.map.MapBuilder;
 import cn.hutool.core.map.MapUtil;
 import com.freewayso.image.combiner.ImageCombiner;
 import com.freewayso.image.combiner.enums.OutputFormat;
@@ -8,11 +7,14 @@ import com.freewayso.image.combiner.enums.ZoomMode;
 import com.jyyy.picturegeneration.controller.param.JccMainPictureParam;
 import com.jyyy.picturegeneration.controller.param.MLolMainPictureParam;
 import com.jyyy.picturegeneration.pojo.jcc.JccHeroes;
-import com.jyyy.picturegeneration.pojo.mLol.MLolHeroes;
+import com.jyyy.picturegeneration.pojo.mLol.MlolSkins;
 import com.jyyy.picturegeneration.service.PictureGenerationService;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.ObjectUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
@@ -21,7 +23,11 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.util.HashMap;
+import java.io.IOException;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -29,8 +35,12 @@ import java.util.stream.Collectors;
 @Service
 public class PictureGenerationServiceImpl implements PictureGenerationService {
 
+    private static final Logger log = LoggerFactory.getLogger(PictureGenerationServiceImpl.class);
     @Autowired
     private ResourceLoader resourceLoader;
+
+    @Value("${file.localPath}")
+    private String localUrl;
 
     @SneakyThrows
     // 测试
@@ -65,13 +75,15 @@ public class PictureGenerationServiceImpl implements PictureGenerationService {
         BufferedImage image = ImageIO.read(resource.getInputStream());
         ImageCombiner combiner = new ImageCombiner(image, OutputFormat.PNG);
         setTitleInfo(combiner, config.getAccount().getQq(), config.getAccount().getHeroesAmount(), config.getAccount().getSkinsAmount(), config.getAccount().getServerArea());
-        List<MLolHeroes> heroes = config.getHeroes();
-        heroes.addAll(config.heroes);
+        List<MlolSkins> heroes = config.getSkins();
+        heroes.addAll(config.skins);
         List<Map<String, Object>> map = heroes.stream()
-                .map(item -> MapUtil.<String, Object>builder().put("image", item.getImage()).build())
+                .map(item -> MapUtil.<String, Object>builder()
+                        .put("image", item.getImage())
+                        .put("id", item.getId()).build())
                 .collect(Collectors.toList());
         Color color = new Color(1, 74, 158);
-        addImageElementAutoSize(combiner, map, 40, 135, 890, 480, 130, 185, 2, 5, color);
+        addImageElementAutoSize(combiner, map, "17", 40, 135, 890, 480, 130, 185, 2, 5, color);
         combiner.combine();
         BufferedImage bufferedImage = combiner.getCombinedImage();
         return bufferedImage;
@@ -88,10 +100,12 @@ public class PictureGenerationServiceImpl implements PictureGenerationService {
         List<JccHeroes> heroes = config.getHeroes();
         heroes.addAll(config.heroes);
         List<Map<String, Object>> map = heroes.stream()
-                .map(item -> MapUtil.<String, Object>builder().put("image", item.getImage()).build())
+                .map(item -> MapUtil.<String, Object>builder()
+                        .put("image", item.getImage())
+                        .put("id", item.getId()).build())
                 .collect(Collectors.toList());
         Color color = new Color(50, 165, 252);
-        addImageElementAutoSize(combiner, map, 40, 135, 890, 480, 110, 110, 3, 6, color);
+        addImageElementAutoSize(combiner, map, "25", 40, 135, 890, 480, 110, 110, 3, 6, color);
         combiner.combine();
         BufferedImage bufferedImage = combiner.getCombinedImage();
         return bufferedImage;
@@ -115,21 +129,23 @@ public class PictureGenerationServiceImpl implements PictureGenerationService {
         combiner.addTextElement(text, 18, x, y).setLineHeight(30).setColor(Color.white);
     }
 
-    public void addImageElementAutoSize(ImageCombiner combiner, List<Map<String, Object>> heroes,
-                                        int left, int top,
+    public void addImageElementAutoSize(ImageCombiner combiner, List<Map<String, Object>> skins,
+                                        String gameId, int left, int top,
                                         int detailWidth, int detailHeight,
                                         int elementWidth, int elementHeight,
                                         int numRows, int numCols) {
-        addImageElementAutoSize(combiner, heroes, left, top, detailWidth, detailHeight, elementWidth, elementHeight, numRows, numCols, null);
+        addImageElementAutoSize(combiner, skins, gameId, left, top, detailWidth, detailHeight, elementWidth, elementHeight, numRows, numCols, null);
     }
 
-    public void addImageElementAutoSize(ImageCombiner combiner, List<Map<String, Object>> heroes,
-                                        int left, int top,
+    public void addImageElementAutoSize(ImageCombiner combiner, List<Map<String, Object>> skins,
+                                        String gameId, int left, int top,
                                         int detailWidth, int detailHeight,
                                         int elementWidth, int elementHeight,
                                         int numRows, int numCols, Color color) {
         int padding = 30; // 边距
-
+        if (skins.isEmpty()) {
+            return;
+        }
         int widthPadding = (detailWidth - (numCols * elementWidth)) / numCols;
         int heightPadding = (detailHeight - (numRows * elementHeight)) / numRows;
 
@@ -154,22 +170,63 @@ public class PictureGenerationServiceImpl implements PictureGenerationService {
         for (int row = 0; row < numRows; row++) {
             for (int col = 0; col < numCols; col++) {
                 int index = row * numCols + col;
-                if (index >= heroes.size()) {
+                if (index >= skins.size()) {
                     break; // 如果已经超过列表长度，跳出循环
                 }
                 int imageX = startX + col * (elementWidth + widthPadding);
                 int imageY = startY + row * (elementHeight + heightPadding);
                 // 将 element 添加到 combiner 中，这里假设 combiner 提供了相应的方法
-                String image = heroes.get(index).get("image").toString();
+                String image = skins.get(index).get("image").toString();
                 if (ObjectUtils.isNotEmpty(image)) {
                     if (ObjectUtils.isNotEmpty(color)) {
                         combiner.addRectangleElement(imageX + 8, imageY + 8, elementWidth, elementHeight).setColor(color).setRoundCorner(15);
                     }
-                    combiner.addImageElement(image, imageX, imageY, elementWidth, elementHeight, ZoomMode.WidthHeight)
+                    BufferedImage bufferedImage = loadImage(gameId, skins.get(index).get("id").toString(), image);
+                    combiner.addImageElement(bufferedImage, imageX, imageY, elementWidth, elementHeight, ZoomMode.WidthHeight)
                             .setRoundCorner(15);
                 }
             }
         }
     }
 
+    public BufferedImage loadImage(String gameId, String skinId, String image) {
+        BufferedImage bufferedImage = null;
+        try {
+            String localPath = localUrl + gameId + "/skins/" + skinId + ".png";
+            File file = new File(localPath);
+            if (file.exists()) {
+                bufferedImage = ImageIO.read(file);
+            } else {
+                bufferedImage = loadImageFromURL(image);
+
+                // 如果从网络加载成功，备份图片到本地
+                if (bufferedImage != null) {
+                    backupImageLocally(bufferedImage, localPath);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return bufferedImage;
+    }
+
+    private BufferedImage loadImageFromURL(String imageUrl) {
+        BufferedImage bufferedImage = null;
+        try {
+            bufferedImage = ImageIO.read(new URL(imageUrl));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return bufferedImage;
+    }
+
+    private void backupImageLocally(BufferedImage image, String localPath) {
+        try {
+            Path outputPath = Paths.get(localPath);
+            Files.createDirectories(outputPath.getParent());
+            ImageIO.write(image, "png", outputPath.toFile());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }
