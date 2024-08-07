@@ -2,6 +2,7 @@ package com.jyyy.picturegeneration.service.impl;
 
 import cn.hutool.core.map.MapUtil;
 import com.freewayso.image.combiner.ImageCombiner;
+import com.freewayso.image.combiner.element.TextElement;
 import com.freewayso.image.combiner.enums.OutputFormat;
 import com.freewayso.image.combiner.enums.ZoomMode;
 import com.jyyy.picturegeneration.controller.param.JccMainPictureParam;
@@ -80,10 +81,12 @@ public class PictureGenerationServiceImpl implements PictureGenerationService {
         List<Map<String, Object>> map = heroes.stream()
                 .map(item -> MapUtil.<String, Object>builder()
                         .put("image", item.getImage())
-                        .put("id", item.getId()).build())
+                        .put("id", item.getId())
+                        .put("name", item.getName())
+                        .build())
                 .collect(Collectors.toList());
         Color color = new Color(1, 74, 158);
-        addImageElementAutoSize(combiner, map, "17", 40, 135, 890, 480, 130, 185, 2, 5, color);
+        addImageElementAutoSize(combiner, map, "17", 40, 135, 890, 480, 130, 185, 3, 8, color);
         combiner.combine();
         BufferedImage bufferedImage = combiner.getCombinedImage();
         return bufferedImage;
@@ -102,7 +105,9 @@ public class PictureGenerationServiceImpl implements PictureGenerationService {
         List<Map<String, Object>> map = heroes.stream()
                 .map(item -> MapUtil.<String, Object>builder()
                         .put("image", item.getImage())
-                        .put("id", item.getId()).build())
+                        .put("id", item.getId())
+                        .put("name", item.getName())
+                        .build())
                 .collect(Collectors.toList());
         Color color = new Color(50, 165, 252);
         addImageElementAutoSize(combiner, map, "25", 40, 135, 890, 480, 110, 110, 3, 6, color);
@@ -142,7 +147,7 @@ public class PictureGenerationServiceImpl implements PictureGenerationService {
                                         int detailWidth, int detailHeight,
                                         int elementWidth, int elementHeight,
                                         int numRows, int numCols, Color color) {
-        int padding = 30; // 边距
+        int padding = 15; // 边距
         if (skins.isEmpty()) {
             return;
         }
@@ -177,6 +182,7 @@ public class PictureGenerationServiceImpl implements PictureGenerationService {
                 int imageY = startY + row * (elementHeight + heightPadding);
                 // 将 element 添加到 combiner 中，这里假设 combiner 提供了相应的方法
                 String image = skins.get(index).get("image").toString();
+                String name = skins.get(index).get("name").toString();
                 if (ObjectUtils.isNotEmpty(image)) {
                     if (ObjectUtils.isNotEmpty(color)) {
                         combiner.addRectangleElement(imageX + 8, imageY + 8, elementWidth, elementHeight).setColor(color).setRoundCorner(15);
@@ -184,6 +190,16 @@ public class PictureGenerationServiceImpl implements PictureGenerationService {
                     BufferedImage bufferedImage = loadImage(gameId, skins.get(index).get("id").toString(), image);
                     combiner.addImageElement(bufferedImage, imageX, imageY, elementWidth, elementHeight, ZoomMode.WidthHeight)
                             .setRoundCorner(15);
+                    if (ObjectUtils.isNotEmpty(name)){
+                        int fontSize = 12,lineHeight = 20;
+                        int nameY = imageY + elementHeight - lineHeight;
+                        TextElement textElement = new TextElement(name, fontSize, imageX, nameY);
+                        int textPadding = (elementWidth - textElement.getWidth())/2;
+                        int nameX = imageX+textPadding;
+                        textElement.setX(nameX);
+                        combiner.addRectangleElement(imageX,nameY,elementWidth,lineHeight).setColor(Color.white);
+                        combiner.addTextElement(name,fontSize,nameX,nameY).setLineHeight(lineHeight).setAutoFitWidth((int) (elementWidth*0.8));
+                    }
                 }
             }
         }

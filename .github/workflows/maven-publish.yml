@@ -30,6 +30,6 @@ jobs:
         server: ${{ secrets.SERVER_HOST }}  # 服务器主机名或IP地址
         username: ${{ secrets.SERVER_USERNAME }}  # 服务器用户名
         password: ${{ secrets.SERVER_PASSWORD }}  # 服务器密码（如果使用密码认证）
-        local_path: "target/your-application.jar"  # 要上传的本地文件路径（这里假设Maven生成的jar文件）
-        remote_path: "/path/to/remote/directory"  # 服务器上目标目录路径
+        local_path: "target/PictureGeneration-0.0.1-SNAPSHOT.jar"  # 要上传的本地文件路径（这里假设Maven生成的jar文件）
+        remote_path: "	/www/server/springboot/imageCreate"  # 服务器上目标目录路径
 
