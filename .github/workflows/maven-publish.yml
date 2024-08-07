@@ -10,7 +10,7 @@ on:
 
 jobs:
   build-and-deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted  # 使用自己的 runner 服务器
     
     steps:
     - name: Checkout repository

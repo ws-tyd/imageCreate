@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: PictureGeneration
+  jackson:
+    default-property-inclusion: always
+  web:
+    resources:
+      static-locations: [classpath:/static/]
+  mvc:
+    static-path-pattern: /static/**
+server:
+  port: 9999
+springdoc:
+  swagger-ui:
+    path: /swagger
+  packagesToScan: com.jyyy.picturegeneration.controller
+  paths-to-match: /**
+file:
+  localPath: D:/workDemo/PictureGeneration/files/img/games/
